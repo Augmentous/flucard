@@ -1,0 +1,49 @@
+#!/bin/sh
+
+#load wifi driver 
+
+
+
+w1 
+
+# set this so that can connect to router at channel 13
+iwpriv mlan0 regioncode 0x41
+
+sleep 2
+touch /server_upload_activated.txt
+
+uaputl bss_stop
+
+ifconfig mlan0 down
+# buzzer -t 1
+sleep 2
+
+
+
+echo "get available router and update wep.conf or wpa.conf"
+connect_router
+var=$?
+echo "var : $var"
+#sleep 2
+
+if [ "$var" -eq 0 ]; then
+	wpa_supplicant -i mlan0 -B -c /etc/wep.conf
+elif [ "$var" -eq 1 ] || [ "$var" -eq 2 ]; then
+	wpa_supplicant -i mlan0 -B -c /etc/wpa.conf
+else
+	echo "no available router"
+	buzzer -t 5
+	echo "exit now"
+	exit -1	#do not run udhcpc if router is not found
+	
+fi
+
+iwpriv  mlan0 htcapinfo 0x4020000
+udhcpc -i mlan0 -s /etc/dhcp.script -h flucard -A 2 -T 1 -t 5
+
+# buzzer -t 5
+buzzer -t 1; sleep 0.25; buzzer -t 0
+buzzer -t 1; sleep 0.25; buzzer -t 0
+buzzer -t 1; sleep 0.25; buzzer -t 0
+sleep 5
+ifconfig >> /mnt/sd/log.txt
